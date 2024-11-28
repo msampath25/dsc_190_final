@@ -1,0 +1,31 @@
+
+```{r setup}
+library(data.table)
+library(plink2R)
+knitr::opts_knit$set(root.dir = '~/Documents/GitHub/dsc_190_final/')
+```
+# Step 0: Preprocessing GE Data
+
+preprocssing.R
+
+# Step 1: Bin snps based on epigenetic annotations
+
+100kb region
+
+For Hi-C data, create three bins: exists within 100kb, exists out of 100kb, or no interactions
+
+For snATAC-seq, create two bins: accessible vs not accessible
+
+For Enhancer, create two bins
+
+``` {r creating_bins}
+
+
+
+
+
+
+```
+
+
+
