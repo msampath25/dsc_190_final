@@ -4,11 +4,79 @@ library(data.table)
 library(plink2R)
 knitr::opts_knit$set(root.dir = '~/Documents/GitHub/dsc_190_final/')
 ```
-# Step 0: Preprocessing GE Data
+# Step 0: Preprocessing Data
 
 preprocssing.R
 
-# Step 1: Bin snps based on epigenetic annotations
+# Step 1: Baseline Model
+
+-   Fusion command per gene basis:
+      - Identify gene number per gene basis (1-50)
+      - Need bed, bim, fam for each gene
+        - hm3 snps
+        - cis -> 500 kb
+      - need to define a temp file path for intermediate files
+  
+- PLINK command to create bed, bim, fams:
+
+BASE_DIR=~/Documents/Github/dsc_190_final
+
+files=$(ls ${BASE_DIR}/extract/)
+for file in $files; do
+    # Extract chromosome number between chr_ and _.txt
+    chr_num=$(echo $file | grep -o 'chr_[0-9]*' | grep -o '[0-9]*')
+    
+    ./plink \
+    --bfile ${BASE_DIR}/eur_1000G/1000G_eur_chr${chr_num} \
+    --extract ${BASE_DIR}/extract/${file} \
+    --make-bed \
+    --out ${BASE_DIR}/gene_filtered_1kg/${file}_1kg_chr${chr_num}
+done
+
+
+- Fusion command:
+
+files=$(cat ../fusion_file.txt)
+for file in $files; do
+  Rscript FUSION.compute_weights.R \
+    --bfile ../gene_filtered_1kg/${file} \
+    --tmp ../int_fusion \
+    --out fusion_basemodel/${file} \
+    --models enet \
+    --PATH_plink "~/Desktop/UCSD_Senior/Fall/DSC_190/plink"
+done
+
+
+
+```{r baseline}
+ge <- fread('~/Documents/GitHub/dsc_190_final/filtered_geuvadis_dataset.tsv')
+ge <- ge[order(as.numeric(ge$Chr)), ]
+chr <- 1
+hm3snps <- fread("~/Documents/GitHub/dsc_190_final/w_hm3.snplist", header = T)
+
+gt <- read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', 1))
+for (i in 1:50) {
+  upper <- ge$Coord[i] + 500000
+  lower <- ge$Coord[i] - 500000
+  if (as.numeric(ge$Chr)[i] != chr) {
+    chr <- as.numeric(ge$Chr)[i]
+    gt <- read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', chr))
+  }
+  in_range <- which(gt$bim$V4 >= lower & gt$bim$V4 <= upper)
+  cis_snps <- gt$bim$V2[in_range]
+  
+  hm3_filt <- which(cis_snps %in% hm3snps$SNP)
+  cis_snps <- cis_snps[hm3_filt]
+  
+  write.table(cis_snps, file = paste0("extract/extract_gene_", i, "_chr_", chr, "_.txt"), 
+              quote = F, row.names = F, col.names = F)
+}
+
+
+```
+
+
+# Step 2: Bin snps based on epigenetic annotations
 
 100kb region
 
@@ -18,13 +86,36 @@ For snATAC-seq, create two bins: accessible vs not accessible
 
 For Enhancer, create two bins
 
-``` {r creating_bins}
+``` {r bins}
 
-
-
-
-
-
+ge <- fread('~/Documents/GitHub/dsc_190_final/filtered_geuvadis_dataset.tsv')
+ge <- ge[order(as.numeric(ge$Chr)), ]
+chr = 1
+gt = read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', 1))
+for (i in 1:50) {
+  if (as.numeic(ge$Chr)[i] != chr) {
+    chr = as.numeic(ge$Chr)[i]
+    gt = read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', chr))
+  }
+  # We should also only use snps in the hapmap set so we don't have to do QC
+  
+  # we have to filter snps outside of 100kb
+  upper <- as.numeric(ge$Coord)[i] + 100000
+  lower <- as.numeric(ge$Coord)[i] - 100000
+  
+  in_range <- which(gt$bim$V4 >= lower & gt$bim$V4 <= upper)
+  
+  # for each snp we have to find appropriate bins
+    # annotate the snps according to Hi-C data 
+    
+    # annotate the snps according to snATAC-seq
+    
+    # annoate the snps according to 
+    
+    # we have to store rsids for all these snps
+ 
+   # output each bin to a unique file 
+}
 ```
 
 
