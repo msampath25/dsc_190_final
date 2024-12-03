@@ -75,48 +75,125 @@ for (i in 1:50) {
 
 ```
 
+# Step 2: Create a model for trans qtls
 
-# Step 2: Bin snps based on epigenetic annotations
+Same commands as above
 
-100kb region
 
-For Hi-C data, create three bins: exists within 100kb, exists out of 100kb, or no interactions
 
-For snATAC-seq, create two bins: accessible vs not accessible
-
-For Enhancer, create two bins
-
-``` {r bins}
-
+```{f trans_qtls}
 ge <- fread('~/Documents/GitHub/dsc_190_final/filtered_geuvadis_dataset.tsv')
 ge <- ge[order(as.numeric(ge$Chr)), ]
-chr = 1
-gt = read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', 1))
+chr <- 1
+hm3snps <- fread("~/Documents/GitHub/dsc_190_final/w_hm3.snplist", header = T)
+
+gt <- read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', 1))
 for (i in 1:50) {
-  if (as.numeic(ge$Chr)[i] != chr) {
-    chr = as.numeic(ge$Chr)[i]
-    gt = read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', chr))
+  upper <- ge$Coord[i] + 500000
+  lower <- ge$Coord[i] - 500000
+  if (as.numeric(ge$Chr)[i] != chr) {
+    chr <- as.numeric(ge$Chr)[i]
+    gt <- read_plink(paste0('~/Documents/GitHub/dsc_190_final/eur_1000G/1000G_eur_chr', chr))
   }
-  # We should also only use snps in the hapmap set so we don't have to do QC
+  in_range <- which(gt$bim$V4 <= lower & gt$bim$V4 >= upper)
+  cis_snps <- gt$bim$V2[in_range]
   
-  # we have to filter snps outside of 100kb
-  upper <- as.numeric(ge$Coord)[i] + 100000
-  lower <- as.numeric(ge$Coord)[i] - 100000
+  hm3_filt <- which(cis_snps %in% hm3snps$SNP)
+  cis_snps <- cis_snps[hm3_filt]
   
-  in_range <- which(gt$bim$V4 >= lower & gt$bim$V4 <= upper)
-  
-  # for each snp we have to find appropriate bins
-    # annotate the snps according to Hi-C data 
-    
-    # annotate the snps according to snATAC-seq
-    
-    # annoate the snps according to 
-    
-    # we have to store rsids for all these snps
- 
-   # output each bin to a unique file 
+  write.table(cis_snps, file = paste0("extract_trans/extract_gene_", i, "_chr_", chr, "_.txt"), 
+              quote = F, row.names = F, col.names = F)
 }
+
 ```
+
+# Step 3: Processing Epigenetic Data
+
+```{r epigenetic}
+enhancer <- fread('~/Documents/GitHub/dsc_190_final/B_cell_blood_enhancers.bed.txt')
+filt <- which(enhancer$V1 != 'chrX' & enhancer$V1 != 'chrY')
+enhancer<- enhancer[filt, ]
+
+
+atac <- fread('~/Documents/GitHub/dsc_190_final/B_cell_atac.bed.gz')
+filt <- which(atac$V1 != 'chrX' & atac$V1 != 'chrY')
+atac <- atac[filt, ]
+
+hic_domains <- fread('~/Documents/GitHub/dsc_190_final/B_cell_contact_domains.bedpe.gz')
+colnames(hic_domains)[1] <- "V1"
+filt <- which(hic_domains$V1 != 'chrX' & hic_domains$V1 != 'chrY')
+hic_domains[filt, ]
+
+hic_loops <- fread('~/Documents/GitHub/dsc_190_final/B_cell_loops.bedpe.gz')
+colnames(hic_loops)[1] <- "V1"
+filt <- which(hic_loops$V1 != 'chrX' & hic_loops$V1 != 'chrY')
+hic_loops[filt, ]
+
+```
+# Step 4: Creating Bins 
+
+Intersect bed files
+
+000:
+
+001:
+
+bedtools intersect -a B_cell_contact_domains.bedpe.gz \
+-b B_cell_atac_bed.gz B_cell_blood_enhancers.bed.txt \
+-v > 001.bed
+
+
+010:
+
+bedtools intersect -a B_cell_atac_bed.gz \
+-b B_cell_contact_domains.bedpe.gz B_cell_blood_enhancer.bed.txt \
+-v > 010.bed
+
+100:
+
+bedtools intersect -a B_cell_blood_enhancer.bed.txt \ 
+-b B_cell_contact_domains.bedpe.gz B_cell_atac_bed.gz \
+-v > 100.bed
+
+011:
+
+bedtools intersect -a B_cell_atac.bed.gz \
+-b B_cell_contact_domains.bedpe.gz > 011_int.bed
+
+bedtools intersect -a 011_int.bed \
+-b B_cell_enhancers.bed.txt \
+-v > 011.bed
+
+110:
+
+bedtools intersect -a B_cell_blood_enhancer.bed.txt \
+-b B_cell_atact.bed.gz> 110_int.bed
+
+bedtools intersect -a 110_int.bed \
+-b B_cell_contact_domains.bedpe.gz \
+-v > 110.bed
+
+101:
+
+bedtools intersect -a B_cell_blood_enhancer.bed.txt \
+-b B_cell_contact_domains.bedpe.gz > 101_int.bed
+
+bedtools intersect -a 101_int.bed \
+-b B_cell_atac.bed.gz \
+-v > 101.bed
+
+111: 
+
+bedtools intersect -a B_cell_blood_enhancer.bed.txt \
+-b B_cell_contact_domains.bedpe.gz B_cell_atac.bed.gz > 111.bed
+
+
+
+```{r }
+
+
+```
+
 
 
 
