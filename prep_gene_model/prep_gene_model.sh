@@ -6,22 +6,24 @@ out="/home/i3gupta/lustre/DSC291/data/out"
 genes="/home/i3gupta/lustre/DSC291/data/geuvadis_gene_info.csv" # gene info
 x=`basename $ge`
 
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+
 ################################################################################################
 # Gene Phen files
 ################################################################################################
 
-
+# python $SCRIPT_DIR/gene_phen.py $ge $out/gene_phen
 
 ################################################################################################
 # Genetic PCs
 ################################################################################################
 
-# rsq=0.8 # r2 threshold
-# N=50 # number of variants in a widnow
-# w=5 
+rsq=0.8 # r2 threshold
+N=50 # number of variants in a widnow
+w=5 
 
-# o=${out}/genetic_PCs/N${N}_w${w}_rsq${rsq}
-# mkdir -p $out/genetic_PCs
+# o=${out}/covars/N${N}_w${w}_rsq${rsq}
+# mkdir -p $out/covars
 
 # plink --bfile  $gt \
 #     --exclude range $myex/data/high-LD-regions.txt \
@@ -43,69 +45,66 @@ x=`basename $ge`
 # Gene Expression PCs
 ################################################################################################
 
+# mkdir -p $out/covars/genexp_PCs
+# Rscript $SCRIPT_DIR/genexp_PCs.R $ge $out/covars/genexp_PCs
 
 ################################################################################################
 # # Combine covariates
 ################################################################################################
 
-# python /home/i3gupta/scripts/combine_covars.py -g /home/i3gupta/lustre/lupus/pbcounts/genetic_PCs/N50_w5_rsq0.8.eigenvec -x /home/i3gupta/lustre/lupus/pbcounts/gene_exp_PCs/${x}.eigenvec -o /home/i3gupta/lustre/lupus/pbcounts/covars/${x}.covars
+# python $SCRIPT_DIR/combine_covars.py -g $out/covars/N${N}_w${w}_rsq${rsq}.eigenvec -x $out/covars/genexp_PCs.eigenvec -o $out/covars/combined.covars
 
 ################################################################################################
 # # cis snps
 ################################################################################################
 
 
-mkdir -p $out/cissnps/baseline
-i=0
-while IFS=$',' read -r TargetID Gene_Symbol Chr Coord; do
-    if [ "$i" -gt 1 ]; then
-        # Remove 'chr' prefix from chromosome value if present
-        chrom=$(echo "$Chr" | sed 's/chr//g')
+# mkdir -p $out/cissnps/baseline
+# i=0
+# while IFS=$',' read -r TargetID Gene_Symbol Chr Coord; do
+#     if [ "$i" -gt 1 ]; then
+#         # Remove 'chr' prefix from chromosome value if present
+#         chrom=$(echo "$Chr" | sed 's/chr//g')
         
-        # Calculate start and end positions with the 250,000 base pair buffer
-        from_bp=$((Coord - 250000))
-        to_bp=$((Coord + 250000))
+#         # Calculate start and end positions with the 250,000 base pair buffer
+#         from_bp=$((Coord - 250000))
+#         to_bp=$((Coord + 250000))
         
-        # Remove everything after the first dot in the output name
-        TargetID=$(echo "${TargetID}" | cut -d '.' -f 1)
+#         # Remove everything after the first dot in the output name
+#         TargetID=$(echo "${TargetID}" | cut -d '.' -f 1)
         
-        # Run the PLINK command with the extracted values
-        plink --bfile $gt --chr "$chrom" --from-bp "$from_bp" --to-bp "$to_bp" --make-bed --out "${out}/cissnps/baseline/${TargetID}"
-    fi
-    i=$(($i+1))
-done < "$genes"
+#         # Run the PLINK command with the extracted values
+
+#         (plink --bfile $gt --chr "$chrom" --from-bp "$from_bp" --to-bp "$to_bp" --make-bed --out "${out}/cissnps/baseline/${TargetID}")&
+#     fi
+#     i=$(($i+1))
+# done < "$genes"
 
 ################################################################################################
 # # Make job files (one for each gene)
 ################################################################################################
 
-# i=0
-# for g_f in `ls ${out}/gene_phen/`
-# do 
+i=0
+for g_f in `ls ${out}/gene_phen/`
+do 
+g=`echo $g_f | sed 's/.phen//g' `
 
-# g=`echo $g_f | sed 's/.phen//g' `
-# out="${out}/models/${g}"
-# jobfile=${out}/jobs/fusion_job_${i}.sh
+(
+for x in baseline # here we'll have baseline, trans, bins
+do 
+    o=${out}/models/$x
+    jobfile=${out}/jobs/$x/fusion_job_${i}.sh
+    mkdir -p $o
+    mkdir -p ${out}/jobs/$x
 
-# mkdir -p /home/i3gupta/lustre/lupus/pbcounts/jobs/$celltype
-# mkdir -p $out
+    echo "g=$g" > $jobfile
+    #ciseqtl
+    printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ${out}/cissnps/$x/$g --covar ${out}/covars/combined.covars --out ${o}/${g} --tmp ${o}/${g}.tmp --models top1,blup,lasso,enet --pheno ${out}/gene_phen/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> ${o}/${g}.log;\n" >> $jobfile
+done ) &
 
-# (echo "g=$g" > $jobfile
+i=$(($i+1))
+done
 
-# for x in cases controls donors # here we'll have bins
-# do 
-#     mkdir -p $out/$x
-#     #ciseqtl
-#     printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ~/lustre/lupus/pbcounts/cissnps/$g --covar /home/i3gupta/lustre/lupus/pbcounts/covars/${celltype}_${x}.covars --out $out/$x/${g} --tmp $out/$x/${g}.tmp --models top1,blup,lasso,enet --pheno /home/i3gupta/lustre/lupus/pbcounts/gene_phen/${celltype}/$x/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> $out/$x/${g}.log;\n" >> $jobfile
-#     #gw-eqtl
-#     # printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile /home/i3gupta/lustre/lupus/imputed/LupusHRC.plink/lupusHRC_hm3_consensus_sumstats_info_0.3_maf_0.05 --covar /home/i3gupta/lustre/lupus/pbcounts_mean_log_filtered/${celltype}_${x}.covars --out $out/$x/${g} --tmp $out/$x/${g}.tmp --models top1,blup,lasso,enet --pheno /home/i3gupta/lustre/lupus/pbcounts_mean_log_filtered/gene_phen/${celltype}/$x/${g}.csv --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> $out/$x/${g}.log;\n" >> $jobfile
-# done ) &
-
-# printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ~/lustre/lupus/pbcounts/cissnps/$g --covar /home/i3gupta/lustre/lupus/pbcounts/covars/${celltype}_${x}.covars --out $out/$x/${g} --tmp $out/$x/${g}.tmp --models top1,blup,lasso,enet --pheno /home/i3gupta/lustre/lupus/pbcounts/gene_phen/${celltype}/$x/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> $out/$x/${g}.log;\n" >> $jobfile
-
-# i=$(($i+1))
-# done
-
-# wait 
-# exit
+wait 
+exit
 
