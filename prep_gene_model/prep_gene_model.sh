@@ -52,7 +52,7 @@ w=5
 # # Combine covariates
 ################################################################################################
 
-# python $SCRIPT_DIR/combine_covars.py -g $out/covars/N${N}_w${w}_rsq${rsq}.eigenvec -x $out/covars/genexp_PCs.eigenvec -o $out/covars/combined.covars
+# python $SCRIPT_DIR/combine_covars.py -c $out/covars/gender.txt -g $out/covars/N${N}_w${w}_rsq${rsq}.eigenvec -x $out/covars/genexp_PCs.eigenvec -o $out/covars/combined.covars
 
 ################################################################################################
 # # cis snps
