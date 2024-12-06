@@ -1,0 +1,12 @@
+PLINK v2.0.0-a.6.3 64-bit (3 Dec 2024)
+Options in effect:
+  --extract-region
+
+Hostname: mac.lan
+Working directory: /Users/marcosanchez/dsc_190_final
+Start time: Thu Dec  5 17:50:38 2024
+
+Error: Unrecognized flag ('--extract-region').
+For more info, try "plink2 --help <flag name>" or "plink2 --help | more".
+
+End time: Thu Dec  5 17:50:38 2024
