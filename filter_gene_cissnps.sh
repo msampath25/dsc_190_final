@@ -1,30 +1,32 @@
 #!/bin/bash
 
+# Input directories and output directory
 cissnps_dir="$1"
-bed_files_dir="$2"
+regions_dir="$2"
 output_dir="$3"
 
 mkdir -p "${output_dir}"
 
-# Loop through each gene's genotype in the cis-SNPs folder
-for gene_file in "${cissnps_dir}"/*.bed; do
-    gene_name=$(basename "${gene_file}" .bed)
+# Loop through each gene file
+for cissnps_file in "${cissnps_dir}"/*.bed; do
+    gene_name=$(basename "${cissnps_file}" .bed)
 
-    echo "Processing gene: ${gene_name}"
+    echo "Processing cis-SNPs for gene: ${gene_name}"
 
-    # Loop through each bed file in the bed files directory
-    for bed_file in "${bed_files_dir}"/*.bed; do
-        bed_name=$(basename "${bed_file}" .bed)
+    # Loop through each BED file
+    for bed_file in "${regions_dir}"/*.bed; do
+        region_name=$(basename "${bed_file}" .bed)
 
-        output_prefix="${output_dir}/${gene_name}_${bed_name}"
+        output_prefix="${output_dir}/${gene_name}_${region_name}"
 
-        echo "    Filtering ${gene_name} against ${bed_name}..."
+        echo "    Extracting regions from ${region_name} for ${gene_name}..."
 
-        plink --bfile "${gene_file%.bed}" \
-              --extract "${bed_file%.bed}.bim" \
-              --make-bed \
-              --out "${output_prefix}"
+        # Run PLINK with `--extract range`
+        plink --bfile "${cissnps_dir}/${gene_name}" \
+               --extract range "${bed_file}" \
+               --make-bed \
+               --out "${output_prefix}"
     done
 done
 
-echo "Filtering completed. Filtered files saved in ${output_dir}."
+echo "All processing is complete. Outputs saved to ${output_dir}."
