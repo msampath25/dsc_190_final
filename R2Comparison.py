@@ -2,32 +2,59 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-trans_data = pd.read_csv('/Users/marcosanchez/DSC 190 project/trans_snpcounts_gene_by_bin.csv', sep='\t')
-cis_data = pd.read_csv('/Users/marcosanchez/DSC 190 project/cis_snpcounts_gene_by_bin.csv', sep='\t')
+def process_and_combine_plot(file_paths, model_type, title_suffix):
+    plt.figure(figsize=(10, 7))
 
-# Scatterplot data
-trans_baseline = trans_data['Baseline']
-trans_best_r2 = trans_data.iloc[:, 2:].max(axis=1)
+    for file_path in file_paths:
 
-cis_baseline = cis_data['Baseline']
-cis_best_r2 = cis_data.iloc[:, 2:].max(axis=1)
+        file_name = file_path.split('/')[-1].replace('.csv', '')
 
-# Calculate mean R² values for trans and cis models
-trans_mean_baseline = trans_baseline.mean()
-trans_mean_best_r2 = trans_best_r2.mean()
+        data = pd.read_csv(file_path)
 
-cis_mean_baseline = cis_baseline.mean()
-cis_mean_best_r2 = cis_best_r2.mean()
+        baseline_column = 'baseline' if 'cis' in model_type else 'trans_baseline'
 
-plt.figure(figsize=(7, 7))
-plt.scatter(trans_mean_baseline, trans_mean_best_r2, color='blue', label='Trans', s=100)
-plt.scatter(cis_mean_baseline, cis_mean_best_r2, color='orange', label='Cis', s=100)
-plt.plot([0, max(trans_mean_baseline, cis_mean_baseline)],
-         [0, max(trans_mean_best_r2, cis_mean_best_r2)],
-         color='red', linestyle='--', label='x=y Line')
-plt.title('Comparison of Mean Cross-Validation R²')
-plt.xlabel('No Epigenetic Info')
-plt.ylabel('Best Epigenetic Bins')
-plt.legend()
-plt.grid()
-plt.show()
+        data_cleaned = data.dropna(subset=[baseline_column])
+
+        data_cleaned = data_cleaned.fillna(0)
+
+        baseline = data_cleaned[baseline_column]
+        bins = ['cis_epi_000', 'cis_epi_001', 'cis_epi_010', 'cis_epi_011',
+                'cis_epi_100', 'cis_epi_101', 'cis_epi_110', 'cis_epi_111'] \
+            if 'cis' in model_type else \
+            ['trans_epi_000', 'trans_epi_001', 'trans_epi_010', 'trans_epi_011',
+             'trans_epi_100', 'trans_epi_101', 'trans_epi_110', 'trans_epi_111']
+        best_r2 = data_cleaned[bins].max(axis=1)
+
+        plt.scatter(baseline, best_r2, alpha=0.5, label=f'{file_name} Data')
+
+    plt.plot([0, 1], [0, 1], color='red', linestyle='--', label='x=y Line')
+    plt.title(f'Comparison of Baseline vs Best R² ({model_type.capitalize()} {title_suffix})')
+    plt.xlabel('Baseline R²')
+    plt.ylabel('Best R²')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+r2_cis_file_paths = [
+    '/Users/marcosanchez/DSC 190 project/r2_cis_enet.csv',
+    '/Users/marcosanchez/DSC 190 project/r2_cis_lasso.csv'
+]
+
+r2_trans_file_paths = [
+    '/Users/marcosanchez/DSC 190 project/r2_trans_enet.csv',
+    '/Users/marcosanchez/DSC 190 project/r2_trans_lasso.csv'
+]
+
+h2_cis_file_path = [
+    '/Users/marcosanchez/DSC 190 project/h2_cis.csv'
+]
+
+h2_trans_file_path = [
+    '/Users/marcosanchez/DSC 190 project/h2_trans.csv'
+]
+
+process_and_combine_plot(r2_cis_file_paths, 'cis', 'R² Models')
+process_and_combine_plot(r2_trans_file_paths, 'trans', 'R² Models')
+process_and_combine_plot(h2_cis_file_path, 'cis', 'h² Models')
+process_and_combine_plot(h2_trans_file_path, 'trans', 'h² Models')
