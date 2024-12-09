@@ -60,36 +60,44 @@ SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
 # Rscript $SCRIPT_DIR/matrixeqtl.R --bfile $gt --gene $ge --covar $out/covars/combined.covars --out $out/matrixeqtl.txt --pval 1e-3
 
-mkdir -p $out/cissnps/trans_baseline
-mkdir -p $out/cissnps/sigeqtls
-for gene in `cat $genes_subset`; do
-    grep $gene $out/matrixeqtl.txt | awk '{print $1}' > $out/cissnps/sigeqtls/${gene}.txt
-#  (plink --bfile $gt --extract $out/cissnps/sigeqtls/${gene}.txt --make-bed --out "${out}/cissnps/trans_baseline/${gene}")&
-done
+# mkdir -p $out/cissnps/trans_baseline
+# mkdir -p $out/cissnps/sigeqtls
+
+# awk 'NR>1{print $2}' $out/matrixeqtl.txt | cut -d '.' -f 1 | sort | uniq > $out/genes_with_transeqtls.txt
+# i=0
+# for gene in `cat $out/genes_with_transeqtls.txt`; do
+#     grep $gene $out/matrixeqtl.txt | awk '{print $1}' > "$out/cissnps/sigeqtls/$gene.txt"
+
+#     ls $out/cissnps/sigeqtls/$(echo $gene | cut -d '.' -f 1).txt
+
+#     plink --bfile $gt --extract $out/cissnps/sigeqtls/${gene}.txt --make-bed --out "${out}/cissnps/trans_baseline/${gene}"
+
+#     i=$(($i+1))
+# done
 
 ################################################################################################
 # # Make job files (one for each gene)
 ################################################################################################
 
-# i=0
-# for g in `cat $genes_subset`; do
-# do
+i=0
+for g in `cat $out/genes_with_transeqtls.txt`
+do
 
-# (
-# for x in trans_baseline
-# do
-#     o=${out}/models/$x
-#     jobfile=${out}/jobs/$x/fusion_job_${i}.sh
-#     mkdir -p $o
-#     mkdir -p ${out}/jobs/$x
+(
+for x in trans_baseline
+do
+    o=${out}/models/$x
+    jobfile=${out}/jobs/$x/fusion_job_${i}.sh
+    mkdir -p $o
+    mkdir -p ${out}/jobs/$x
 
-#     echo "g=$g" > $jobfile
-#     #ciseqtl
-#     printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ${out}/cissnps/$x/$g --covar ${out}/covars/combined.covars --out ${o}/${g} --tmp ${o}/${g}.tmp --models lasso,enet --pheno ${out}/gene_phen/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> ${o}/${g}.log;\n" >> $jobfile
-# done ) &
+    echo "g=$g" > $jobfile
+    #ciseqtl
+    printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ${out}/cissnps/$x/$g --covar ${out}/covars/combined.covars --out ${o}/${g} --tmp ${o}/${g}.tmp --models lasso,enet --pheno ${out}/gene_phen/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> ${o}/${g}.log;\n" >> $jobfile
+done ) &
 
-# i=$(($i+1))
-# done
+i=$(($i+1))
+done
 
 wait 
 exit

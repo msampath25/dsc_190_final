@@ -99,7 +99,7 @@ do
 
     echo "g=$g" > $jobfile
     #ciseqtl
-    printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ${out}/cissnps/$x/$g --covar ${out}/covars/combined.covars --out ${o}/${g} --tmp ${o}/${g}.tmp --models top1,blup,lasso,enet --pheno ${out}/gene_phen/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> ${o}/${g}.log;\n" >> $jobfile
+    printf "Rscript /home/i3gupta/tools/fusion_twas-master/FUSION.compute_weights.R --bfile ${out}/cissnps/$x/$g --covar ${out}/covars/combined.covars --out ${o}/${g} --tmp ${o}/${g}.tmp --models lasso,enet --pheno ${out}/gene_phen/${g}.phen --verbose 2 --PATH_gcta /home/i3gupta/tools/fusion_twas-master/gcta_nr_robust --PATH_gemma /home/i3gupta/tools/gemma-0.98.5-linux-static-AMD64 --save_hsq --hsq_p 1.00 &> ${o}/${g}.log;\n" >> $jobfile
 done ) &
 
 i=$(($i+1))
